@@ -11,7 +11,14 @@
       "Bash(git init:*)",
       "Bash(git remote add:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Setup containerized React and Express application\n\n- React TypeScript frontend with Nginx\n- Express TypeScript API with health endpoint\n- Docker multi-stage builds for both services\n- Docker Compose orchestration\n- Development and production configurations\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Setup containerized React and Express application\n\n- React TypeScript frontend with Nginx\n- Express TypeScript API with health endpoint\n- Docker multi-stage builds for both services\n- Docker Compose orchestration\n- Development and production configurations\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Setup containerized React and Express application\n\n- React TypeScript frontend with Nginx\n- Express TypeScript API with health endpoint\n- Docker multi-stage builds for both services\n- Docker Compose orchestration\n- Development and production configurations\n- Proper .gitignore excluding concepts folders\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git check-ignore:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(npx prisma init:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": [],
     "ask": []

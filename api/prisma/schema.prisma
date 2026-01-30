@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Player {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerAuctions PlayerAuction[]
+  picks          Pick[]
+
+  @@map("players")
+}
+
+model Studio {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movies Movie[]
+
+  @@map("studios")
+}
+
+model Movie {
+  id                    String    @id @default(uuid())
+  title                 String
+  budget                Int?
+  director              String?
+  anticipatedReleaseDate DateTime?
+  actualReleaseDate     DateTime?
+  genre                 String?
+  posterUrl             String?
+  trailerUrl            String?
+  status                String?   @default("announced")
+  studioId              String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  studio Studio      @relation(fields: [studioId], references: [id])
+  picks  Pick[]
+  stats  MovieStats?
+
+  @@map("movies")
+}
+
+model Auction {
+  id              String   @id @default(uuid())
+  name            String
+  year            Int
+  cycle           Int
+  startDate       DateTime
+  endDate         DateTime
+  budgetPerPlayer Int
+  status          String   @default("upcoming")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  playerAuctions PlayerAuction[]
+  picks          Pick[]
+
+  @@unique([year, cycle])
+  @@map("auctions")
+}
+
+model PlayerAuction {
+  id              String   @id @default(uuid())
+  playerId        String
+  auctionId       String
+  remainingBudget Int
+  totalSpent      Int      @default(0)
+  totalPoints     Int      @default(0)
+  rank            Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  player  Player  @relation(fields: [playerId], references: [id])
+  auction Auction @relation(fields: [auctionId], references: [id])
+
+  @@unique([playerId, auctionId])
+  @@map("player_auctions")
+}
+
+model Pick {
+  id             String   @id @default(uuid())
+  playerId       String
+  movieId        String
+  auctionId      String
+  purchaseAmount Int
+  pickDate       DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  player  Player  @relation(fields: [playerId], references: [id])
+  movie   Movie   @relation(fields: [movieId], references: [id])
+  auction Auction @relation(fields: [auctionId], references: [id])
+
+  @@unique([playerId, movieId, auctionId])
+  @@unique([movieId, auctionId])
+  @@map("picks")
+}
+
+model MovieStats {
+  id                      String   @id @default(uuid())
+  movieId                 String   @unique
+  oscarNominations        Int      @default(0)
+  oscarWins               Int      @default(0)
+  domesticBoxOffice       BigInt   @default(0)
+  internationalBoxOffice  BigInt   @default(0)
+  metacriticScore         Int?
+  updatedAt               DateTime @updatedAt
+
+  movie Movie @relation(fields: [movieId], references: [id])
+
+  @@map("movie_stats")
+}
