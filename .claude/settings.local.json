@@ -18,7 +18,20 @@
       "Bash(git commit:*)",
       "Bash(npx prisma init:*)",
       "Bash(npx prisma migrate:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(docker run:*)",
+      "Bash(npm start)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(cat:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/big_picture_auction?schema=public\" npx prisma db push:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(lsof:*)",
+      "Bash(brew services:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(kill:*)",
+      "Bash(launchctl list:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

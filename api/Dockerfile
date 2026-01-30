@@ -15,11 +15,15 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 RUN npm ci --only=production
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+RUN chmod +x ./scripts/startup.sh
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+CMD ["sh", "./scripts/startup.sh"]
