@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import { getMetacriticScore, getMetacriticScoreDetails } from './services/metacritic';
+import { getBoxOfficeData } from './services/boxoffice';
 
 dotenv.config();
 
@@ -44,6 +45,30 @@ app.get('/api/metacritic/:title', async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch Metacritic score' });
+  }
+});
+
+// Test endpoint for Box Office service
+app.get('/api/boxoffice/:title', async (req: Request, res: Response) => {
+  try {
+    const { title } = req.params;
+    const data = await getBoxOfficeData(title);
+
+    if (!data) {
+      return res.json({
+        title,
+        domestic: 0,
+        international: 0,
+        total: 0,
+      });
+    }
+
+    res.json({
+      title,
+      ...data,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch box office data' });
   }
 });
 

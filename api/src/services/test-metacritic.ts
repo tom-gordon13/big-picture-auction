@@ -1,5 +1,7 @@
 import { getMetacriticScore, getMetacriticScoreDetails } from './metacritic';
 
+// npx tsx src/services/test-metacritic.ts
+
 async function test() {
   // Replace these with any movie titles you want to test
   const moviesToTest = [
