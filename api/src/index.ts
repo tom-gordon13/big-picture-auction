@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
+import { getMetacriticScore, getMetacriticScoreDetails } from './services/metacritic';
 
 dotenv.config();
 
@@ -26,6 +27,23 @@ app.get('/api/players', async (req: Request, res: Response) => {
     res.json(players);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch players' });
+  }
+});
+
+// Test endpoint for Metacritic service
+app.get('/api/metacritic/:title', async (req: Request, res: Response) => {
+  try {
+    const { title } = req.params;
+    const score = await getMetacriticScore(title);
+    const details = await getMetacriticScoreDetails(title);
+
+    res.json({
+      title,
+      score,
+      details,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch Metacritic score' });
   }
 });
 
