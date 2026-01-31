@@ -31,7 +31,9 @@
       "Bash(docker-compose down:*)",
       "Bash(kill:*)",
       "Bash(launchctl list:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:www.metacritic.com)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []
