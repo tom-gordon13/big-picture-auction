@@ -33,7 +33,19 @@
       "Bash(launchctl list:*)",
       "Bash(npm run build:*)",
       "WebFetch(domain:www.metacritic.com)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:www.boxofficemojo.com)",
+      "WebSearch",
+      "WebFetch(domain:awardsdatabase.oscars.org)",
+      "WebFetch(domain:www.imdb.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.oscars.org)",
+      "Bash(pg_isready:*)",
+      "Bash(node -e:*)",
+      "Bash(psql:*)",
+      "Bash(find:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:www.prisma.io)"
     ],
     "deny": [],
     "ask": []

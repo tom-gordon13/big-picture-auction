@@ -54,6 +54,9 @@ const MoviesList = styled.div`
 `;
 
 export const PlayerColumn: React.FC<PlayerColumnProps> = ({ player, isLeader = false }) => {
+  // Sort movies by purchase price (descending - highest first)
+  const sortedMovies = [...player.movies].sort((a, b) => b.price - a.price);
+
   return (
     <ColumnContainer isLeader={isLeader}>
       <PlayerHeader
@@ -65,7 +68,7 @@ export const PlayerColumn: React.FC<PlayerColumnProps> = ({ player, isLeader = f
         isLeader={isLeader}
       />
       <MoviesList>
-        {player.movies.map((movie, index) => (
+        {sortedMovies.map((movie, index) => (
           <MovieCard key={index} movie={movie} />
         ))}
       </MoviesList>

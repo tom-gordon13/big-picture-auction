@@ -125,7 +125,7 @@ const PointsValue = styled.span<{ hasPoints: boolean }>`
 export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
   return (
     <CardContainer>
-      <MoviePoster title={movie.title} theme={movie.posterTheme} />
+      <MoviePoster title={movie.title} theme={movie.posterTheme} posterUrl={movie.posterUrl} />
       <MovieInfo>
         <MovieTitleRow>
           <MovieTitle>{movie.title}</MovieTitle>

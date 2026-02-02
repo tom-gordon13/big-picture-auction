@@ -4,6 +4,7 @@ import { PosterTheme, posterThemes, theme } from '../theme';
 interface MoviePosterProps {
   title: string;
   theme: PosterTheme;
+  posterUrl?: string | null;
 }
 
 const PosterContainer = styled.div`
@@ -25,6 +26,13 @@ const PosterContainer = styled.div`
     width: 60px;
     height: 90px;
   }
+`;
+
+const PosterImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 `;
 
 const PosterArt = styled.div<{ posterTheme: PosterTheme }>`
@@ -62,12 +70,16 @@ const PosterTitle = styled.div`
   }
 `;
 
-export const MoviePoster: React.FC<MoviePosterProps> = ({ title, theme: posterTheme }) => {
+export const MoviePoster: React.FC<MoviePosterProps> = ({ title, theme: posterTheme, posterUrl }) => {
   return (
     <PosterContainer>
-      <PosterArt posterTheme={posterTheme}>
-        <PosterTitle>{title}</PosterTitle>
-      </PosterArt>
+      {posterUrl ? (
+        <PosterImage src={posterUrl} alt={title} />
+      ) : (
+        <PosterArt posterTheme={posterTheme}>
+          <PosterTitle>{title}</PosterTitle>
+        </PosterArt>
+      )}
     </PosterContainer>
   );
 };

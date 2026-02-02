@@ -14,6 +14,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY scripts ./scripts
 RUN npm ci --only=production

@@ -4,6 +4,7 @@ import { PosterTheme } from '../theme';
 export interface MovieResponse {
   title: string;
   price: number;
+  posterUrl?: string | null;
   posterTheme: PosterTheme;
   boxOffice: {
     status: CriterionStatus;
