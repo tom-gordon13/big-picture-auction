@@ -44,29 +44,6 @@ const LoadingContainer = styled.div`
   font-size: 1.5rem;
 `;
 
-const ErrorContainer = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 1rem;
-  color: ${theme.colors.failed};
-  font-family: ${theme.fonts.barlow};
-  padding: 2rem;
-  text-align: center;
-`;
-
-const ErrorTitle = styled.h2`
-  font-family: ${theme.fonts.oswald};
-  font-size: 1.5rem;
-  color: ${theme.colors.cream};
-`;
-
-const ErrorMessage = styled.p`
-  font-size: 1rem;
-`;
-
 // Fallback sample data (for reference/development)
 const fallbackPlayersData: LeaderboardResponse = [
   {
