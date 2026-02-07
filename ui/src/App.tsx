@@ -80,6 +80,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Mission: Impossible',
         price: 285,
         posterTheme: 'action',
+        cycle: 1,
         boxOffice: { status: 'achieved', value: '$142M' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -89,6 +90,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'The Bride',
         price: 180,
         posterTheme: 'horror',
+        cycle: 1,
         boxOffice: { status: 'failed', value: '$68M' },
         oscar: { status: 'achieved', value: 'Nom' },
         metacritic: { status: 'achieved', value: '88' },
@@ -98,6 +100,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Sinners',
         price: 210,
         posterTheme: 'thriller',
+        cycle: 1,
         boxOffice: { status: 'achieved', value: '$118M' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -107,6 +110,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Wuthering Heights',
         price: 95,
         posterTheme: 'drama',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -116,6 +120,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Death of a Unicorn',
         price: 77,
         posterTheme: 'fantasy',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -134,6 +139,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Wicked: For Good',
         price: 320,
         posterTheme: 'musical',
+        cycle: 1,
         boxOffice: { status: 'achieved', value: '$412M' },
         oscar: { status: 'achieved', value: 'Nom' },
         metacritic: { status: 'failed', value: '79' },
@@ -143,6 +149,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'F1',
         price: 245,
         posterTheme: 'action',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -152,6 +159,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'The Running Man',
         price: 175,
         posterTheme: 'scifi',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -161,6 +169,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Materialists',
         price: 110,
         posterTheme: 'drama',
+        cycle: 1,
         boxOffice: { status: 'failed', value: '$24M' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'achieved', value: '91' },
@@ -170,6 +179,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Bugonia',
         price: 70,
         posterTheme: 'comedy',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -188,6 +198,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Superman',
         price: 290,
         posterTheme: 'scifi',
+        cycle: 1,
         boxOffice: { status: 'achieved', value: '$287M' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -197,6 +208,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'A Big Bold Beautiful Journey',
         price: 165,
         posterTheme: 'drama',
+        cycle: 1,
         boxOffice: { status: 'failed', value: '$31M' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'achieved', value: '87' },
@@ -206,6 +218,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Warfare',
         price: 140,
         posterTheme: 'action',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -215,6 +228,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'The Legend of Ochi',
         price: 105,
         posterTheme: 'fantasy',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -224,6 +238,7 @@ const fallbackPlayersData: LeaderboardResponse = [
         title: 'Frankenstein',
         price: 80,
         posterTheme: 'horror',
+        cycle: 1,
         boxOffice: { status: 'pending', value: 'TBD' },
         oscar: { status: 'pending', value: 'TBD' },
         metacritic: { status: 'pending', value: 'TBD' },
@@ -237,13 +252,59 @@ function App() {
   const [playersData, setPlayersData] = useState<LeaderboardResponse>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
+  // Fetch available years on mount
   useEffect(() => {
+    const fetchYears = async () => {
+      try {
+        const years = await apiClient.getAuctionYears();
+        const yearNumbers = years.map(y => y.year).sort((a, b) => b - a);
+        setAvailableYears(yearNumbers);
+
+        // Check URL for year parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const yearParam = urlParams.get('year');
+
+        if (yearParam) {
+          const yearFromUrl = parseInt(yearParam, 10);
+          if (!isNaN(yearFromUrl) && yearNumbers.includes(yearFromUrl)) {
+            setSelectedYear(yearFromUrl);
+            return;
+          }
+        }
+
+        // Set the latest year as default
+        if (yearNumbers.length > 0) {
+          setSelectedYear(yearNumbers[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching years:', err);
+        // Default to current year if fetch fails
+        const currentYear = new Date().getFullYear();
+        setAvailableYears([currentYear]);
+        setSelectedYear(currentYear);
+      }
+    };
+
+    fetchYears();
+  }, []);
+
+  // Fetch leaderboard when year changes
+  useEffect(() => {
+    if (selectedYear === null) return;
+
+    // Update URL when year changes
+    const url = new URL(window.location.href);
+    url.searchParams.set('year', selectedYear.toString());
+    window.history.pushState({}, '', url.toString());
+
     const fetchLeaderboard = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await apiClient.getLatestLeaderboard();
+        const data = await apiClient.getLatestLeaderboard(selectedYear);
 
         // If no data returned, use fallback data
         if (data.length === 0) {
@@ -262,13 +323,17 @@ function App() {
     };
 
     fetchLeaderboard();
-  }, []);
+  }, [selectedYear]);
 
   return (
     <>
       <Global styles={css(globalStyles)} />
       <AppContainer>
-        <Header />
+        <Header
+          selectedYear={selectedYear || new Date().getFullYear()}
+          availableYears={availableYears}
+          onYearChange={setSelectedYear}
+        />
         {loading ? (
           <LoadingContainer>Loading auction data...</LoadingContainer>
         ) : error ? (

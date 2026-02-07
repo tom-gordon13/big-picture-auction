@@ -112,7 +112,7 @@ model Pick {
 model MovieStats {
   id                      String   @id @default(uuid())
   movieId                 String   @unique
-  oscarNominations        Int      @default(0)
+  oscarNominations        Int?
   oscarWins               Int      @default(0)
   domesticBoxOffice       BigInt   @default(0)
   internationalBoxOffice  BigInt   @default(0)

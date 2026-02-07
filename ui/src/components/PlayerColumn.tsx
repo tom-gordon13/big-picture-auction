@@ -1,3 +1,4 @@
+import React from 'react';
 import styled from '@emotion/styled';
 import { PlayerHeader } from './PlayerHeader';
 import { MovieCard } from './MovieCard';
@@ -31,7 +32,7 @@ const MoviesList = styled.div`
   padding: 0.35rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
   min-height: 0;
 
   &::-webkit-scrollbar {
@@ -53,9 +54,56 @@ const MoviesList = styled.div`
   }
 `;
 
+const CycleGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+`;
+
+const CycleDivider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+`;
+
+const CycleLine = styled.div`
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, ${theme.colors.bpGreenDark}, transparent);
+`;
+
+const CycleLabel = styled.span`
+  font-family: ${theme.fonts.barlowCondensed};
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: ${theme.colors.bpGreenGlow};
+  padding: 0.2rem 0.5rem;
+  background: ${theme.colors.bpGreenDark};
+  border: 1px solid ${theme.colors.bpGreenDark};
+  border-radius: 2px;
+`;
+
 export const PlayerColumn: React.FC<PlayerColumnProps> = ({ player, isLeader = false }) => {
-  // Sort movies by purchase price (descending - highest first)
-  const sortedMovies = [...player.movies].sort((a, b) => b.price - a.price);
+  // Group movies by cycle
+  const moviesByCycle = player.movies.reduce((acc, movie) => {
+    const cycle = movie.cycle || 1;
+    if (!acc[cycle]) {
+      acc[cycle] = [];
+    }
+    acc[cycle].push(movie);
+    return acc;
+  }, {} as Record<number, typeof player.movies>);
+
+  // Sort movies within each cycle by purchase price (descending)
+  Object.keys(moviesByCycle).forEach(cycle => {
+    moviesByCycle[Number(cycle)].sort((a, b) => b.price - a.price);
+  });
+
+  // Get sorted cycle numbers
+  const cycles = Object.keys(moviesByCycle).map(Number).sort((a, b) => a - b);
 
   return (
     <ColumnContainer isLeader={isLeader}>
@@ -68,8 +116,21 @@ export const PlayerColumn: React.FC<PlayerColumnProps> = ({ player, isLeader = f
         isLeader={isLeader}
       />
       <MoviesList>
-        {sortedMovies.map((movie, index) => (
-          <MovieCard key={index} movie={movie} />
+        {cycles.map((cycle, cycleIndex) => (
+          <React.Fragment key={cycle}>
+            {cycleIndex > 0 && (
+              <CycleDivider>
+                <CycleLine />
+                <CycleLabel>Round {cycle}</CycleLabel>
+                <CycleLine />
+              </CycleDivider>
+            )}
+            <CycleGroup>
+              {moviesByCycle[cycle].map((movie, index) => (
+                <MovieCard key={`${cycle}-${index}`} movie={movie} />
+              ))}
+            </CycleGroup>
+          </React.Fragment>
         ))}
       </MoviesList>
     </ColumnContainer>

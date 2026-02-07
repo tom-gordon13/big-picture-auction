@@ -61,11 +61,16 @@ app.get('/api/metacritic/:title', async (req: Request, res: Response) => {
 app.get('/api/boxoffice/:title', async (req: Request, res: Response) => {
   try {
     const { title } = req.params;
-    const data = await getBoxOfficeData(title as string);
+    const { year } = req.query;
+    const data = await getBoxOfficeData(
+      title as string,
+      year ? parseInt(year as string, 10) : undefined
+    );
 
     if (!data) {
       return res.json({
         title,
+        year: year || null,
         domestic: 0,
         international: 0,
         total: 0,
@@ -74,6 +79,7 @@ app.get('/api/boxoffice/:title', async (req: Request, res: Response) => {
 
     res.json({
       title,
+      year: year || null,
       ...data,
     });
   } catch (error) {
@@ -179,15 +185,19 @@ app.post('/api/movies/:movieId/update-stats', async (req: Request, res: Response
       return res.status(404).json({ error: 'Movie not found' });
     }
 
-    // Extract year from release date if available
+    // Extract year and full release date if available
     let year: number | undefined;
+    let releaseDate: Date | undefined;
+
     if (movie.actualReleaseDate) {
-      year = new Date(movie.actualReleaseDate).getFullYear();
+      releaseDate = new Date(movie.actualReleaseDate);
+      year = releaseDate.getFullYear();
     } else if (movie.anticipatedReleaseDate) {
-      year = new Date(movie.anticipatedReleaseDate).getFullYear();
+      releaseDate = new Date(movie.anticipatedReleaseDate);
+      year = releaseDate.getFullYear();
     }
 
-    const result = await updateMovieStats(movie.id, movie.title, year);
+    const result = await updateMovieStats(movie.id, movie.title, year, releaseDate);
 
     res.json({
       message: result.success ? 'Update successful' : 'Update completed with errors',
@@ -264,38 +274,82 @@ app.get('/api/materialized-view/movie/:movieId/picks', async (req: Request, res:
   }
 });
 
-app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) => {
+app.get('/api/auctions/years', async (req: Request, res: Response) => {
   try {
-    const latestAuction = await prisma.auction.findFirst({
+    const auctions = await prisma.auction.findMany({
+      select: { year: true, cycle: true, name: true },
       orderBy: [{ year: 'desc' }, { cycle: 'desc' }],
+      distinct: ['year'],
     });
 
-    if (!latestAuction) {
+    res.json(auctions);
+  } catch (error) {
+    console.error('Error fetching auction years:', error);
+    res.status(500).json({ error: 'Failed to fetch auction years' });
+  }
+});
+
+app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) => {
+  try {
+    const { year } = req.query;
+
+    let targetYear: number;
+    if (year) {
+      targetYear = parseInt(year as string, 10);
+    } else {
+      // Get latest year
+      const latestAuction = await prisma.auction.findFirst({
+        orderBy: [{ year: 'desc' }],
+      });
+      if (!latestAuction) {
+        return res.json([]);
+      }
+      targetYear = latestAuction.year;
+    }
+
+    // Get all auctions for the target year
+    const auctions = await prisma.auction.findMany({
+      where: { year: targetYear },
+      orderBy: [{ cycle: 'asc' }],
+    });
+
+    if (auctions.length === 0) {
       return res.json([]);
     }
 
-    const playerAuctions = await prisma.playerAuction.findMany({
-      where: { auctionId: latestAuction.id },
-      orderBy: {
-        totalPoints: 'desc',
-      },
+    const auctionIds = auctions.map(a => a.id);
+
+    // Get all player auctions for this year (we'll combine their stats)
+    const allPlayerAuctions = await prisma.playerAuction.findMany({
+      where: { auctionId: { in: auctionIds } },
+    });
+
+    // Group by player
+    const playerAuctionsByPlayer = new Map<string, typeof allPlayerAuctions>();
+    allPlayerAuctions.forEach(pa => {
+      const existing = playerAuctionsByPlayer.get(pa.playerId) || [];
+      playerAuctionsByPlayer.set(pa.playerId, [...existing, pa]);
     });
 
     const leaderboard = await Promise.all(
-      playerAuctions.map(async (pa, index: number) => {
+      Array.from(playerAuctionsByPlayer.entries()).map(async ([playerId, playerAuctions], index: number) => {
         const player = await prisma.player.findUnique({
-          where: { id: pa.playerId },
+          where: { id: playerId },
         });
 
-        const picks = await prisma.pick.findMany({
+        // Get all picks across all cycles for this player
+        const allPicks = await prisma.pick.findMany({
           where: {
-            playerId: pa.playerId,
-            auctionId: pa.auctionId,
+            playerId: playerId,
+            auctionId: { in: auctionIds },
+          },
+          include: {
+            auction: true,
           },
         });
 
         const movies = await Promise.all(
-          picks.map(async (pick) => {
+          allPicks.map(async (pick) => {
             const movie = await prisma.movie.findUnique({
               where: { id: pick.movieId },
             });
@@ -316,10 +370,23 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
                   : 'failed'
                 : 'pending';
 
+            // Determine if Oscars have been announced for this movie's eligibility year
+            // Movies are typically eligible for Oscars in the year after release
+            const movieYear = movie.actualReleaseDate
+              ? new Date(movie.actualReleaseDate).getFullYear()
+              : movie.anticipatedReleaseDate
+              ? new Date(movie.anticipatedReleaseDate).getFullYear()
+              : null;
+
+            // Oscars for 2026 movies would be in 2027
+            const oscarYear = movieYear ? movieYear + 1 : null;
+            const currentYear = new Date().getFullYear();
+            const oscarsHaveHappened = oscarYear && oscarYear <= currentYear;
+
             const oscarStatus =
-              stats?.oscarNominations && stats.oscarNominations > 0
+              stats?.oscarNominations && stats.oscarNominations >= 2
                 ? 'achieved'
-                : stats?.oscarNominations === 0
+                : oscarsHaveHappened && stats && stats.oscarNominations !== null && stats.oscarNominations < 2
                 ? 'failed'
                 : 'pending';
 
@@ -339,6 +406,7 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
               price: pick.purchaseAmount,
               posterUrl: movie.posterUrl || null,
               posterTheme: (movie.genre?.toLowerCase() || 'drama') as any,
+              cycle: pick.auction.cycle,
               boxOffice: {
                 status: boxOfficeStatus,
                 value:
@@ -349,10 +417,8 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
               oscar: {
                 status: oscarStatus,
                 value:
-                  stats?.oscarNominations && stats.oscarNominations > 0
-                    ? 'Nom'
-                    : stats?.oscarNominations === 0
-                    ? 'None'
+                  stats?.oscarNominations !== null && stats?.oscarNominations !== undefined
+                    ? stats.oscarNominations.toString()
                     : 'TBD',
               },
               metacritic: {
@@ -368,16 +434,31 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
 
         const validMovies = movies.filter((m) => m !== null);
 
+        // Calculate total points from actual movie points
+        const calculatedPoints = validMovies.reduce((total, movie) => {
+          return total + (movie.points || 0);
+        }, 0);
+
+        // Calculate total spent and remaining budget across all cycles
+        const totalSpent = playerAuctions.reduce((sum, pa) => sum + pa.totalSpent, 0);
+        const remainingBudget = playerAuctions.reduce((sum, pa) => sum + pa.remainingBudget, 0);
+
         return {
           rank: index + 1,
           name: player ? `${player.firstName} ${player.lastName}` : 'Unknown',
-          spent: pa.totalSpent,
-          left: pa.remainingBudget,
-          points: pa.totalPoints,
+          spent: totalSpent,
+          left: remainingBudget,
+          points: calculatedPoints,
           movies: validMovies,
         };
       })
     );
+
+    // Re-sort by points and update ranks
+    leaderboard.sort((a, b) => b.points - a.points);
+    leaderboard.forEach((player, idx) => {
+      player.rank = idx + 1;
+    });
 
     res.json(leaderboard);
   } catch (error) {

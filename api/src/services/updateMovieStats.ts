@@ -3,6 +3,7 @@ import { getMetacriticScore } from './metacritic';
 import { getBoxOfficeData } from './boxoffice';
 import { getOscarNominations } from './oscars';
 import { refreshMoviePicksView } from './materializedView';
+import { getOscarOverride } from '../data/oscarOverrides';
 
 export interface MovieStatsUpdate {
   movieId: string;
@@ -10,13 +11,13 @@ export interface MovieStatsUpdate {
   success: boolean;
   errors: string[];
   updates: {
-    metacritic?: number | string;
+    metacritic?: number | string | null;
     boxOffice?: {
       domestic: number;
       international: number;
       total: number;
     };
-    oscars?: number;
+    oscars?: number | null;
   };
 }
 
@@ -25,12 +26,14 @@ export interface MovieStatsUpdate {
  * @param movieId - The movie ID
  * @param title - The movie title
  * @param year - Optional movie year for more accurate results
+ * @param releaseDate - Optional full release date for more accurate unreleased check
  * @returns Update result with success status and any errors
  */
 export async function updateMovieStats(
   movieId: string,
   title: string,
-  year?: number
+  year?: number,
+  releaseDate?: Date
 ): Promise<MovieStatsUpdate> {
   const result: MovieStatsUpdate = {
     movieId,
@@ -41,6 +44,70 @@ export async function updateMovieStats(
   };
 
   console.log(`\nUpdating stats for "${title}"${year ? ` (${year})` : ''}...`);
+
+  // Check if the movie is unreleased
+  let isUnreleased = false;
+  const now = new Date();
+
+  if (releaseDate) {
+    // If we have a full release date, check if it's in the future
+    isUnreleased = releaseDate > now;
+  } else if (year) {
+    // If we only have a year, check if the year is in the future
+    const currentYear = now.getFullYear();
+    isUnreleased = year > currentYear;
+  }
+
+  if (isUnreleased) {
+    console.log(`  ⏭ Skipping unreleased movie`);
+    console.log(`  No stats will be fetched until the movie is released`);
+
+    // Set empty stats for unreleased movies and update database
+    result.updates.metacritic = null;
+    result.updates.boxOffice = undefined;
+    result.updates.oscars = null; // Oscars are pending for unreleased movies
+
+    try {
+      // Check if movie_stats record exists
+      const existingStats = await prisma.movieStats.findUnique({
+        where: { movieId },
+      });
+
+      if (existingStats) {
+        // Clear out any existing data for unreleased movies
+        await prisma.movieStats.update({
+          where: { movieId },
+          data: {
+            metacriticScore: null,
+            domesticBoxOffice: BigInt(0),
+            internationalBoxOffice: BigInt(0),
+            oscarNominations: null, // Set to null for unreleased movies
+          },
+        });
+      } else {
+        // Create new record with empty values
+        await prisma.movieStats.create({
+          data: {
+            movieId,
+            metacriticScore: null,
+            domesticBoxOffice: BigInt(0),
+            internationalBoxOffice: BigInt(0),
+            oscarNominations: null, // Set to null for unreleased movies
+          },
+        });
+      }
+
+      console.log(`  ✓ Database updated with empty stats for unreleased movie`);
+      result.success = true;
+    } catch (error) {
+      const errorMsg = `Failed to clear stats for unreleased movie: ${error}`;
+      console.error(`  ${errorMsg}`);
+      result.errors.push(errorMsg);
+      result.success = false;
+    }
+
+    return result;
+  }
 
   let successfulFetches = 0;
   let totalFetches = 3; // We have 3 services
@@ -64,7 +131,7 @@ export async function updateMovieStats(
 
   // Fetch Box Office data
   try {
-    const boxOfficeData = await getBoxOfficeData(title);
+    const boxOfficeData = await getBoxOfficeData(title, year);
     result.updates.boxOffice = boxOfficeData || undefined;
     successfulFetches++;
 
@@ -81,14 +148,47 @@ export async function updateMovieStats(
 
   // Fetch Oscar nominations
   try {
-    const oscarNominations = await getOscarNominations(title, year);
-    result.updates.oscars = oscarNominations ?? 0;
-    successfulFetches++;
+    // First check for manual override
+    const override = getOscarOverride(title, year);
 
-    if (oscarNominations !== null && oscarNominations > 0) {
-      console.log(`  Oscar Nominations: ${oscarNominations}`);
+    if (override) {
+      console.log(`  Oscar Nominations: ${override.nominations} (from manual override)`);
+      if (override.note) {
+        console.log(`  Note: ${override.note}`);
+      }
+      result.updates.oscars = override.nominations;
+      successfulFetches++;
     } else {
-      console.log(`  Oscar Nominations: 0 or not found`);
+      // Check if Oscars are still pending for this movie
+      // Movies are eligible for Oscars in the year after release
+      // Oscar nominations are announced in January of the ceremony year
+      let oscarsPending = false;
+      if (year) {
+        const oscarCeremonyYear = year + 1; // e.g., 2026 movies → 2027 Oscars
+        const currentYear = now.getFullYear();
+
+        // Oscars nominations are pending if we're before the ceremony year
+        // (Nominations are announced in January of the ceremony year)
+        if (oscarCeremonyYear > currentYear) {
+          oscarsPending = true;
+        }
+      }
+
+      if (oscarsPending) {
+        console.log(`  Oscar Nominations: Pending (ceremony not yet held)`);
+        result.updates.oscars = null; // Use null to indicate pending/TBD
+        successfulFetches++;
+      } else {
+        const oscarNominations = await getOscarNominations(title, year);
+        result.updates.oscars = oscarNominations ?? 0;
+        successfulFetches++;
+
+        if (oscarNominations !== null && oscarNominations > 0) {
+          console.log(`  Oscar Nominations: ${oscarNominations}`);
+        } else {
+          console.log(`  Oscar Nominations: 0 or not found`);
+        }
+      }
     }
   } catch (error) {
     const errorMsg = `Failed to fetch Oscar nominations: ${error}`;
@@ -201,15 +301,19 @@ export async function updateAllMovieStats(): Promise<MovieStatsUpdate[]> {
   const results: MovieStatsUpdate[] = [];
 
   for (const movie of movies) {
-    // Extract year from release date if available
+    // Extract year and full release date if available
     let year: number | undefined;
+    let releaseDate: Date | undefined;
+
     if (movie.actualReleaseDate) {
-      year = new Date(movie.actualReleaseDate).getFullYear();
+      releaseDate = new Date(movie.actualReleaseDate);
+      year = releaseDate.getFullYear();
     } else if (movie.anticipatedReleaseDate) {
-      year = new Date(movie.anticipatedReleaseDate).getFullYear();
+      releaseDate = new Date(movie.anticipatedReleaseDate);
+      year = releaseDate.getFullYear();
     }
 
-    const result = await updateMovieStats(movie.id, movie.title, year);
+    const result = await updateMovieStats(movie.id, movie.title, year, releaseDate);
     results.push(result);
 
     // Add a small delay to avoid rate limiting
@@ -278,15 +382,19 @@ export async function updateMovieStatsByTitle(
     return null;
   }
 
-  // Extract year from release date if available
+  // Extract year and full release date if available
   let year: number | undefined;
+  let releaseDate: Date | undefined;
+
   if (movie.actualReleaseDate) {
-    year = new Date(movie.actualReleaseDate).getFullYear();
+    releaseDate = new Date(movie.actualReleaseDate);
+    year = releaseDate.getFullYear();
   } else if (movie.anticipatedReleaseDate) {
-    year = new Date(movie.anticipatedReleaseDate).getFullYear();
+    releaseDate = new Date(movie.anticipatedReleaseDate);
+    year = releaseDate.getFullYear();
   }
 
-  const result = await updateMovieStats(movie.id, movie.title, year);
+  const result = await updateMovieStats(movie.id, movie.title, year, releaseDate);
 
   // Refresh materialized view after updating this movie's stats
   if (result.success) {

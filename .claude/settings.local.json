@@ -45,7 +45,14 @@
       "Bash(psql:*)",
       "Bash(find:*)",
       "Bash(npm run dev:*)",
-      "WebFetch(domain:www.prisma.io)"
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(docker restart:*)",
+      "Bash(./scripts/reseed-and-update.sh:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(npm run seed:*)",
+      "Bash(tee:*)",
+      "WebFetch(domain:www.hollywoodreporter.com)",
+      "WebFetch(domain:www.pbs.org)"
     ],
     "deny": [],
     "ask": []

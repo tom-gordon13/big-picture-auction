@@ -26,9 +26,10 @@ function parseDollarAmount(dollarString: string): number {
 /**
  * Searches Box Office Mojo for a movie and returns the IMDb ID
  * @param title - The movie title to search for
+ * @param year - Optional year to help filter results
  * @returns The IMDb ID (e.g., "tt0468569") or null if not found
  */
-async function searchForMovie(title: string): Promise<string | null> {
+async function searchForMovie(title: string, year?: number): Promise<string | null> {
   try {
     const searchUrl = `https://www.boxofficemojo.com/search/?q=${encodeURIComponent(title)}`;
 
@@ -41,7 +42,38 @@ async function searchForMovie(title: string): Promise<string | null> {
 
     const $ = cheerio.load(response.data);
 
-    // Look for the first search result link
+    // If year is provided, try to find a result that matches the year
+    if (year) {
+      const yearResults: Array<{ imdbId: string; element: cheerio.Element }> = [];
+
+      $('a[href*="/title/tt"]').each((_, element) => {
+        const $element = $(element);
+        const href = $element.attr('href');
+        if (!href) return;
+
+        const match = href.match(/\/title\/(tt\d+)\//);
+        if (!match) return;
+
+        const imdbId = match[1];
+
+        // Check if the year appears near this result
+        const parent = $element.parent();
+        const grandparent = parent.parent();
+        const searchContext = grandparent.text() || parent.text();
+
+        // Look for the year in the surrounding text
+        if (searchContext.includes(year.toString())) {
+          yearResults.push({ imdbId, element });
+        }
+      });
+
+      // If we found results matching the year, return the first one
+      if (yearResults.length > 0) {
+        return yearResults[0].imdbId;
+      }
+    }
+
+    // Fallback: Look for the first search result link
     // Links are in the format: /title/tt0468569/?ref_=bo_se_r_1
     const firstResult = $('a[href*="/title/tt"]').first();
 
@@ -197,19 +229,20 @@ async function fetchBoxOfficeByImdbId(imdbId: string): Promise<BoxOfficeData | n
 /**
  * Fetches box office data for a given movie title
  * @param title - The movie title (e.g., "The Dark Knight")
+ * @param year - Optional year to help identify the correct movie
  * @returns Box office data with domestic, international, and total numbers
  */
-export async function getBoxOfficeData(title: string): Promise<BoxOfficeData | null> {
+export async function getBoxOfficeData(title: string, year?: number): Promise<BoxOfficeData | null> {
   try {
     // First, search for the movie to get its IMDb ID
-    const imdbId = await searchForMovie(title);
+    const imdbId = await searchForMovie(title, year);
 
     if (!imdbId) {
-      console.log(`Movie "${title}" not found on Box Office Mojo`);
+      console.log(`Movie "${title}"${year ? ` (${year})` : ''} not found on Box Office Mojo`);
       return null;
     }
 
-    console.log(`Found IMDb ID for "${title}": ${imdbId}`);
+    console.log(`Found IMDb ID for "${title}"${year ? ` (${year})` : ''}: ${imdbId}`);
 
     // Fetch box office data using the IMDb ID
     const data = await fetchBoxOfficeByImdbId(imdbId);

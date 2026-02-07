@@ -64,7 +64,42 @@ const ShowSubtitle = styled.div`
   margin-top: 0.1rem;
 `;
 
-export const Header: React.FC = () => {
+const YearSelector = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.75rem;
+`;
+
+const YearButton = styled.button<{ active: boolean }>`
+  font-family: ${theme.fonts.barlowCondensed};
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.4rem 1rem;
+  background: ${props => props.active ? theme.colors.bpGreen : 'transparent'};
+  color: ${props => props.active ? theme.colors.dark : theme.colors.bpGreenGlow};
+  border: 1px solid ${props => props.active ? theme.colors.bpGreen : theme.colors.bpGreenDark};
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.active ? theme.colors.bpGreen : theme.colors.bpGreenDark};
+    color: ${props => props.active ? theme.colors.dark : theme.colors.cream};
+    border-color: ${theme.colors.bpGreen};
+  }
+`;
+
+interface HeaderProps {
+  selectedYear: number;
+  availableYears: number[];
+  onYearChange: (year: number) => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ selectedYear, availableYears, onYearChange }) => {
   const bulbDelays = [0.5, 0, 1, 0.5, 0, 1, 0.5];
 
   return (
@@ -81,8 +116,21 @@ export const Header: React.FC = () => {
           ))}
         </Bulbs>
         <ShowTitle>The Big Picture</ShowTitle>
-        <ShowSubtitle>Movie Auction 2025</ShowSubtitle>
+        <ShowSubtitle>Movie Auction {selectedYear}</ShowSubtitle>
       </MarqueeFrame>
+      {availableYears.length > 1 && (
+        <YearSelector>
+          {availableYears.map(year => (
+            <YearButton
+              key={year}
+              active={selectedYear === year}
+              onClick={() => onYearChange(year)}
+            >
+              {year}
+            </YearButton>
+          ))}
+        </YearSelector>
+      )}
     </HeaderContainer>
   );
 };

@@ -6,6 +6,7 @@ export interface MovieResponse {
   price: number;
   posterUrl?: string | null;
   posterTheme: PosterTheme;
+  cycle: number;
   boxOffice: {
     status: CriterionStatus;
     value: string;
