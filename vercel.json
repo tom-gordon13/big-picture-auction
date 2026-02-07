@@ -1,11 +1,5 @@
 {
   "buildCommand": "cd ui && npm install && npm run build",
   "outputDirectory": "ui/build",
-  "installCommand": "cd backend && npm install && npx prisma generate",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/backend/api/index"
-    }
-  ]
+  "installCommand": "cd backend && npm install && npx prisma generate"
 }
