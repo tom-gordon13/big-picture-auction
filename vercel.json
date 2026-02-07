@@ -1,17 +1,11 @@
 {
-  "version": 2,
   "buildCommand": "cd ui && npm install && npm run build",
   "outputDirectory": "ui/build",
   "installCommand": "cd api && npm install",
-  "functions": {
-    "api/src/index.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/src/index.ts"
+      "source": "/api/:path*",
+      "destination": "/api/src/index"
     }
   ]
 }
