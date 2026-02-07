@@ -44,7 +44,7 @@ async function searchForMovie(title: string, year?: number): Promise<string | nu
 
     // If year is provided, try to find a result that matches the year
     if (year) {
-      const yearResults: Array<{ imdbId: string; element: cheerio.Element }> = [];
+      const yearResults: Array<{ imdbId: string; element: any }> = [];
 
       $('a[href*="/title/tt"]').each((_, element) => {
         const $element = $(element);
