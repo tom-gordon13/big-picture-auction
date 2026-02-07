@@ -53,7 +53,8 @@
       "Bash(tee:*)",
       "WebFetch(domain:www.hollywoodreporter.com)",
       "WebFetch(domain:www.pbs.org)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

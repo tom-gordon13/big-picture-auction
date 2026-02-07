@@ -21,13 +21,13 @@ services:
 
   api:
     build:
-      context: ./api
+      context: ./backend
       dockerfile: Dockerfile
     container_name: big-picture-api
     ports:
       - "8080:5000"
     env_file:
-      - ./api/.env
+      - ./backend/.env
     environment:
       - PORT=5000
       - NODE_ENV=production
