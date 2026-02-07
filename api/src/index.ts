@@ -467,6 +467,12 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Export for Vercel serverless
+export default app;
+
+// Only listen if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}

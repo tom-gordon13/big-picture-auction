@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "name": "big-picture-auction",
+  "builds": [
+    {
+      "src": "ui/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "ui/build"
+      }
+    },
+    {
+      "src": "api/src/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "ui/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
