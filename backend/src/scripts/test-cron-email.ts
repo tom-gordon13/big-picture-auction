@@ -1,27 +1,43 @@
-// Vercel Cron Job - Update Movie Stats
-// This runs on a schedule and emails results
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { getMetacriticScore } from '../services/metacritic';
+import { getBoxOfficeData } from '../services/boxoffice';
+import { getOscarNominations } from '../services/oscars';
+import { getOscarOverride } from '../data/oscarOverrides';
 
-const path = require('path');
-const { Pool } = require('pg');
+/**
+ * Test script to run the cron job logic locally and send test email
+ * This connects to your local or production database based on DATABASE_URL
+ */
 
-// Import services from backend
-const getMetacriticScorePath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'metacritic.js');
-const getBoxOfficeDataPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'boxoffice.js');
-const getOscarNominationsPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'oscars.js');
-const oscarOverridesPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'data', 'oscarOverrides.js');
+interface MovieResult {
+  title: string;
+  status: 'success' | 'partial' | 'failed' | 'skipped';
+  errors: string[];
+  updates: Record<string, any>;
+  changes: Record<string, { old: any; new: any }>;
+  reason?: string;
+}
 
-const { getMetacriticScore } = require(getMetacriticScorePath);
-const { getBoxOfficeData } = require(getBoxOfficeDataPath);
-const { getOscarNominations } = require(getOscarNominationsPath);
-const { getOscarOverride } = require(oscarOverridesPath);
+interface UpdateResults {
+  total: number;
+  successful: number;
+  withErrors: number;
+  skipped: number;
+  movies: MovieResult[];
+}
 
-async function updateAllMovies() {
+async function updateAllMovies(): Promise<UpdateResults> {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    // No SSL for local Docker database
+    ssl: false,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
   });
 
-  const results = {
+  const results: UpdateResults = {
     total: 0,
     successful: 0,
     withErrors: 0,
@@ -30,6 +46,8 @@ async function updateAllMovies() {
   };
 
   try {
+    console.log('Fetching all movies from database...\n');
+
     // Fetch all movies with their current stats
     const result = await pool.query(`
       SELECT
@@ -49,10 +67,14 @@ async function updateAllMovies() {
     const movies = result.rows;
     results.total = movies.length;
 
+    console.log(`Found ${movies.length} movies to process.\n`);
+
     for (const movie of movies) {
-      const movieResult = {
+      console.log(`Processing: ${movie.title}...`);
+
+      const movieResult: MovieResult = {
         title: movie.title,
-        status: 'pending',
+        status: 'success',
         errors: [],
         updates: {},
         changes: {}
@@ -67,8 +89,9 @@ async function updateAllMovies() {
       };
 
       // Extract year and check if released
-      let year;
-      let releaseDate;
+      let year: number | undefined;
+      let releaseDate: Date | undefined;
+
       if (movie.actualReleaseDate) {
         releaseDate = new Date(movie.actualReleaseDate);
         year = releaseDate.getFullYear();
@@ -80,21 +103,22 @@ async function updateAllMovies() {
       const currentDate = new Date();
       const isReleased = releaseDate && releaseDate <= currentDate;
 
-      // Initialize stats to null/0 - we'll populate with fetched data or keep old values
-      let metacriticScore = null;
-      let domesticBoxOffice = 0;
-      let internationalBoxOffice = 0;
-      let oscarNominations = null;
-      let oscarWins = 0;
-
       // Skip unreleased movies
       if (!isReleased) {
         movieResult.status = 'skipped';
         movieResult.reason = 'Not released yet';
         results.skipped++;
         results.movies.push(movieResult);
+        console.log(`  → Skipped (not released yet)\n`);
         continue;
       }
+
+      // Initialize stats to null/0 - we'll populate with fetched data or keep old values
+      let metacriticScore: number | null = null;
+      let domesticBoxOffice = 0;
+      let internationalBoxOffice = 0;
+      let oscarNominations: number | null = null;
+      let oscarWins = 0;
 
       // Fetch Metacritic
       try {
@@ -105,7 +129,7 @@ async function updateAllMovies() {
             movieResult.updates.metacritic = metacriticScore;
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         movieResult.errors.push(`Metacritic: ${error.message}`);
       }
 
@@ -125,7 +149,7 @@ async function updateAllMovies() {
           internationalBoxOffice = boxOffice.international;
           movieResult.updates.boxOffice = `$${(boxOffice.domestic / 1_000_000).toFixed(1)}M`;
         }
-      } catch (error) {
+      } catch (error: any) {
         movieResult.errors.push(`Box Office: ${error.message}`);
       }
 
@@ -141,14 +165,14 @@ async function updateAllMovies() {
       const override = getOscarOverride(movie.title, year);
       if (override) {
         oscarNominations = override.nominations;
-        movieResult.updates.oscars = `${oscarNominations} (override)`;
+        movieResult.updates.oscars = `${oscarNominations} nominations (override)`;
       } else {
         try {
           oscarNominations = await getOscarNominations(movie.title, year);
           if (oscarNominations !== null && oscarNominations > 0) {
-            movieResult.updates.oscars = oscarNominations;
+            movieResult.updates.oscars = `${oscarNominations} nominations`;
           }
-        } catch (error) {
+        } catch (error: any) {
           movieResult.errors.push(`Oscars: ${error.message}`);
         }
       }
@@ -186,22 +210,25 @@ async function updateAllMovies() {
         movieResult.status = movieResult.errors.length > 0 ? 'partial' : 'success';
         if (movieResult.errors.length > 0) {
           results.withErrors++;
+          console.log(`  → Updated with errors: ${movieResult.errors.join(', ')}\n`);
         } else {
           results.successful++;
+          console.log(`  → Success\n`);
         }
-      } catch (error) {
+      } catch (error: any) {
         movieResult.status = 'failed';
         movieResult.errors.push(`Database: ${error.message}`);
         results.withErrors++;
+        console.log(`  → Failed: ${error.message}\n`);
       }
 
       results.movies.push(movieResult);
     }
 
     // Refresh the materialized view after all updates
-    console.log('Refreshing movie_picks_with_stats materialized view...');
+    console.log('\nRefreshing movie_picks_with_stats materialized view...');
     await pool.query('REFRESH MATERIALIZED VIEW movie_picks_with_stats');
-    console.log('Materialized view refreshed');
+    console.log('✓ Materialized view refreshed\n');
   } finally {
     await pool.end();
   }
@@ -209,12 +236,19 @@ async function updateAllMovies() {
   return results;
 }
 
-async function sendEmail(results) {
+async function sendTestEmail(results: UpdateResults) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  const TO_EMAIL = process.env.NOTIFICATION_EMAIL;
+  const TO_EMAIL = process.env.NOTIFICATION_EMAIL || process.env.TEST_EMAIL;
 
-  if (!RESEND_API_KEY || !TO_EMAIL) {
-    console.log('Skipping email - RESEND_API_KEY or NOTIFICATION_EMAIL not configured');
+  if (!RESEND_API_KEY) {
+    console.log('\n⚠️  RESEND_API_KEY not found - skipping email send');
+    console.log('To test email, add RESEND_API_KEY to your .env file');
+    return;
+  }
+
+  if (!TO_EMAIL) {
+    console.log('\n⚠️  No email recipient configured');
+    console.log('Add NOTIFICATION_EMAIL or TEST_EMAIL to your .env file');
     return;
   }
 
@@ -227,7 +261,7 @@ async function sendEmail(results) {
   // Find movies with actual changes
   const moviesWithChanges = results.movies.filter(m => Object.keys(m.changes).length > 0);
 
-  const formatValue = (val, fieldName) => {
+  const formatValue = (val: any, fieldName: string): string => {
     if (val === null || val === undefined) return 'none';
     if (fieldName === 'Domestic Box Office') {
       return `$${(val / 1_000_000).toFixed(1)}M`;
@@ -237,6 +271,7 @@ async function sendEmail(results) {
 
   let html = `
     <h2>🎬 Movie Stats Update Complete</h2>
+    <p><em>This is a test email from your local environment</em></p>
     <p><strong>Summary:</strong></p>
     <ul>
       <li>Total movies: ${results.total}</li>
@@ -326,6 +361,8 @@ async function sendEmail(results) {
 
   // Send email via Resend
   try {
+    console.log(`\n📧 Sending test email to ${TO_EMAIL}...`);
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -335,47 +372,50 @@ async function sendEmail(results) {
       body: JSON.stringify({
         from: 'Big Picture Auction <onboarding@resend.dev>',
         to: [TO_EMAIL],
-        subject: `Movie Stats Update: ${moviesWithChanges.length} changes, ${results.successful} updated`,
+        subject: `[TEST] Movie Stats Update: ${moviesWithChanges.length} changes, ${results.successful} updated`,
         html: html,
       }),
     });
 
     if (!response.ok) {
-      console.error('Failed to send email:', await response.text());
+      const errorText = await response.text();
+      console.error('❌ Failed to send email:', errorText);
     } else {
-      console.log('Email sent successfully');
+      const data = await response.json();
+      console.log('✅ Email sent successfully!');
+      console.log(`   Email ID: ${data.id}`);
     }
-  } catch (error) {
-    console.error('Error sending email:', error);
+  } catch (error: any) {
+    console.error('❌ Error sending email:', error.message);
   }
 }
 
-module.exports = async (req, res) => {
-  // Verify cron secret to prevent unauthorized access
-  const authHeader = req.headers.authorization;
-  const cronSecret = process.env.CRON_SECRET || 'your-secret-key-here';
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+async function main() {
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║     Test Cron Job - Movie Stats Update + Email        ║');
+  console.log('╚════════════════════════════════════════════════════════╝\n');
 
   try {
-    console.log('Starting movie stats update cron job...');
     const results = await updateAllMovies();
 
-    // Send email notification
-    await sendEmail(results);
+    console.log('\n' + '='.repeat(60));
+    console.log('UPDATE SUMMARY:');
+    console.log('='.repeat(60));
+    console.log(`Total movies:     ${results.total}`);
+    console.log(`✅ Successful:    ${results.successful}`);
+    console.log(`⚠️  With errors:   ${results.withErrors}`);
+    console.log(`⏭️  Skipped:       ${results.skipped}`);
+    console.log('='.repeat(60));
 
-    res.status(200).json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      results: results
-    });
-  } catch (error) {
-    console.error('Cron job error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    // Send test email
+    await sendTestEmail(results);
+
+    console.log('\n✅ Test complete!\n');
+    process.exit(0);
+  } catch (error: any) {
+    console.error('\n❌ Fatal error:', error);
+    process.exit(1);
   }
-};
+}
+
+main();
