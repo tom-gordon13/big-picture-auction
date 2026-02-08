@@ -5,8 +5,17 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 30
+    },
+    "api/cron/update-movies.js": {
+      "maxDuration": 300
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/update-movies",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
