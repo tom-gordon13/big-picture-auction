@@ -9,7 +9,8 @@ The cron job:
 - Updates stats for all released movies
 - Skips unreleased movies automatically
 - Emails you a summary of results
-- Uses Vercel Cron (requires **Pro plan** - $20/month)
+- Works on Vercel **Hobby plan** (free!) - timing accuracy is ±1 hour
+- For exact timing, upgrade to Pro plan ($20/month)
 
 ## Setup Steps
 
@@ -116,9 +117,10 @@ Each section shows which movies were affected and what data was updated.
 ## Troubleshooting
 
 ### Cron job not running
-- **Check Vercel plan**: Cron jobs require Pro plan ($20/month)
 - **Check deployment**: Make sure latest code is deployed
 - **Check logs**: View function logs in Vercel dashboard
+- **Check timing**: Hobby plan runs within ±1 hour of scheduled time
+- **Wait**: First run may take up to 24 hours to initialize
 
 ### Not receiving emails
 - **Check RESEND_API_KEY**: Make sure it's set correctly
@@ -141,18 +143,26 @@ Each section shows which movies were affected and what data was updated.
 
 ## Cost
 
-**Vercel Pro**: $20/month
-- Required for cron jobs
-- Includes higher function limits and better performance
+**Vercel Hobby Plan**: $0 (Free!)
+- ✅ Cron jobs supported
+- ⚠️ Timing accuracy: ±1 hour (e.g., 6 AM scheduled may run 5-7 AM)
+- Perfect for daily updates where exact timing doesn't matter
+
+**Vercel Pro**: $20/month (Optional)
+- ✅ Exact timing accuracy
+- ✅ Higher function limits (900s max duration)
+- ✅ Better performance
 
 **Resend Free Tier**: $0
 - 3,000 emails/month
 - 100 emails/day
 - Perfect for daily update notifications
 
+**Total Cost**: **$0** with Hobby + Resend free tiers!
+
 ## Alternative: Manual Updates
 
-If you don't want to pay for Vercel Pro, you can still run updates manually:
+If you prefer manual control or need to run updates immediately:
 
 ```bash
 # From your local machine
