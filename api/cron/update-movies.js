@@ -5,15 +5,31 @@ const path = require('path');
 const { Pool } = require('pg');
 
 // Import services from backend
-const getMetacriticScorePath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'metacritic.js');
-const getBoxOfficeDataPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'boxoffice.js');
-const getOscarNominationsPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'oscars.js');
-const oscarOverridesPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'data', 'oscarOverrides.js');
+let getMetacriticScore, getBoxOfficeData, getOscarNominations, getOscarOverride;
 
-const { getMetacriticScore } = require(getMetacriticScorePath);
-const { getBoxOfficeData } = require(getBoxOfficeDataPath);
-const { getOscarNominations } = require(getOscarNominationsPath);
-const { getOscarOverride } = require(oscarOverridesPath);
+try {
+  const getMetacriticScorePath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'metacritic.js');
+  const getBoxOfficeDataPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'boxoffice.js');
+  const getOscarNominationsPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'services', 'oscars.js');
+  const oscarOverridesPath = path.join(__dirname, '..', '..', 'backend', 'dist', 'src', 'data', 'oscarOverrides.js');
+
+  console.log('Loading services from:', {
+    metacritic: getMetacriticScorePath,
+    boxoffice: getBoxOfficeDataPath,
+    oscars: getOscarNominationsPath,
+    overrides: oscarOverridesPath
+  });
+
+  ({ getMetacriticScore } = require(getMetacriticScorePath));
+  ({ getBoxOfficeData } = require(getBoxOfficeDataPath));
+  ({ getOscarNominations } = require(getOscarNominationsPath));
+  ({ getOscarOverride } = require(oscarOverridesPath));
+
+  console.log('Services loaded successfully');
+} catch (error) {
+  console.error('Failed to load services:', error);
+  throw error;
+}
 
 async function updateAllMovies() {
   const pool = new Pool({
