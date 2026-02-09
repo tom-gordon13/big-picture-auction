@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Global, css } from '@emotion/react';
 import styled from '@emotion/styled';
+import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { PlayerColumn } from './components/PlayerColumn';
 import { Footer } from './components/Footer';
@@ -305,6 +306,7 @@ function App() {
   return (
     <>
       <Global styles={css(globalStyles)} />
+      <Analytics />
       <AppContainer>
         <Header
           selectedYear={selectedYear || new Date().getFullYear()}
