@@ -58,7 +58,8 @@
       "Bash(docker-compose ps:*)",
       "Bash(pkill:*)",
       "Bash(launchctl unload:*)",
-      "Bash(launchctl stop:*)"
+      "Bash(launchctl stop:*)",
+      "Bash(vercel logs:*)"
     ],
     "deny": [],
     "ask": []
