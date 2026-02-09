@@ -139,7 +139,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
           />
           <Criterion
             status={movie.oscar.status}
-            label="Oscar"
+            label="Oscar Nominations"
             value={movie.oscar.value}
           />
           <Criterion
