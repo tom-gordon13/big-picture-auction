@@ -16,6 +16,7 @@ export interface TMDBMovieData {
   voteCount: number;
   popularity: number;
   adult: boolean;
+  imdbId?: string;
 }
 
 /**
@@ -159,6 +160,34 @@ export async function getTMDBMovieDetails(tmdbId: number): Promise<any | null> {
     return response.data;
   } catch (error) {
     console.error(`Error fetching TMDB movie details for ID ${tmdbId}:`, error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/**
+ * Get external IDs (IMDB, etc.) for a movie from TMDB
+ * @param tmdbId - TMDB movie ID
+ * @returns Object containing external IDs (imdb_id, etc.)
+ */
+export async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+
+  if (!apiKey) {
+    console.warn('TMDB_API_KEY not found in environment variables.');
+    return null;
+  }
+
+  try {
+    const response = await axios.get(`https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`, {
+      params: {
+        api_key: apiKey,
+      },
+      timeout: 10000,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching TMDB external IDs for ID ${tmdbId}:`, error instanceof Error ? error.message : error);
     return null;
   }
 }

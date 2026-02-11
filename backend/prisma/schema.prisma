@@ -41,6 +41,8 @@ model Movie {
   genre                 String?
   posterUrl             String?
   trailerUrl            String?
+  letterboxdUrl         String?
+  imdbUrl               String?
   status                String?   @default("announced")
   studioId              String
   createdAt             DateTime  @default(now())

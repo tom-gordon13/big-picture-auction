@@ -20,6 +20,8 @@ export interface MovieResponse {
     value: string;
   };
   points: number | null;
+  imdbUrl?: string | null;
+  letterboxdUrl?: string | null;
 }
 
 export interface PlayerLeaderboardResponse {

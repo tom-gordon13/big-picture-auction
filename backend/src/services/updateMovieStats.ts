@@ -4,6 +4,7 @@ import { getBoxOfficeData } from './boxoffice';
 import { getOscarNominations } from './oscars';
 import { refreshMoviePicksView } from './materializedView';
 import { getOscarOverride } from '../data/oscarOverrides';
+import { getMovieUrls } from './movieUrls';
 
 export interface MovieStatsUpdate {
   movieId: string;
@@ -44,6 +45,41 @@ export async function updateMovieStats(
   };
 
   console.log(`\nUpdating stats for "${title}"${year ? ` (${year})` : ''}...`);
+
+  // Fetch and update movie URLs (IMDB, Letterboxd) if they don't already exist
+  try {
+    const movie = await prisma.movie.findUnique({
+      where: { id: movieId },
+      select: { imdbUrl: true, letterboxdUrl: true },
+    });
+
+    // Only fetch URLs if they don't already exist
+    if (!movie?.imdbUrl || !movie?.letterboxdUrl) {
+      console.log(`  Fetching movie URLs...`);
+      const urls = await getMovieUrls(title, year);
+
+      const urlUpdateData: any = {};
+      if (!movie?.imdbUrl && urls.imdbUrl) {
+        urlUpdateData.imdbUrl = urls.imdbUrl;
+      }
+      if (!movie?.letterboxdUrl && urls.letterboxdUrl) {
+        urlUpdateData.letterboxdUrl = urls.letterboxdUrl;
+      }
+
+      if (Object.keys(urlUpdateData).length > 0) {
+        await prisma.movie.update({
+          where: { id: movieId },
+          data: urlUpdateData,
+        });
+        console.log(`  ✓ Movie URLs updated`);
+      }
+    } else {
+      console.log(`  ℹ Movie URLs already exist, skipping fetch`);
+    }
+  } catch (error) {
+    console.error(`  ⚠ Failed to fetch/update movie URLs: ${error}`);
+    // Don't fail the entire update if URL fetching fails
+  }
 
   // Check if the movie is unreleased
   let isUnreleased = false;

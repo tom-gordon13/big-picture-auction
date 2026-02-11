@@ -23,6 +23,47 @@ const CardContainer = styled.div`
   }
 `;
 
+const PosterSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-shrink: 0;
+`;
+
+const MovieLinks = styled.div`
+  display: flex;
+  gap: 0.35rem;
+  justify-content: center;
+  align-items: center;
+`;
+
+const MovieLink = styled.a`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(40, 40, 40, 0.8);
+  border: 1px solid ${theme.colors.bpGreenDark};
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.7rem;
+
+  &:hover {
+    background: rgba(60, 60, 60, 0.9);
+    border-color: ${theme.colors.bpGreen};
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 768px) {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+`;
+
 const MovieInfo = styled.div`
   flex: 1;
   display: flex;
@@ -125,7 +166,33 @@ const PointsValue = styled.span<{ hasPoints: boolean }>`
 export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
   return (
     <CardContainer>
-      <MoviePoster title={movie.title} theme={movie.posterTheme} posterUrl={movie.posterUrl} />
+      <PosterSection>
+        <MoviePoster title={movie.title} theme={movie.posterTheme} posterUrl={movie.posterUrl} />
+        {(movie.imdbUrl || movie.letterboxdUrl) && (
+          <MovieLinks>
+            {movie.imdbUrl && (
+              <MovieLink
+                href={movie.imdbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View on IMDB"
+              >
+                🎬
+              </MovieLink>
+            )}
+            {movie.letterboxdUrl && (
+              <MovieLink
+                href={movie.letterboxdUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View on Letterboxd"
+              >
+                📽️
+              </MovieLink>
+            )}
+          </MovieLinks>
+        )}
+      </PosterSection>
       <MovieInfo>
         <MovieTitleRow>
           <MovieTitle>{movie.title}</MovieTitle>
