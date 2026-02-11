@@ -370,23 +370,11 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
                   : 'failed'
                 : 'pending';
 
-            // Determine if Oscars have been announced for this movie's eligibility year
-            // Movies are typically eligible for Oscars in the year after release
-            const movieYear = movie.actualReleaseDate
-              ? new Date(movie.actualReleaseDate).getFullYear()
-              : movie.anticipatedReleaseDate
-              ? new Date(movie.anticipatedReleaseDate).getFullYear()
-              : null;
-
-            // Oscars for 2026 movies would be in 2027
-            const oscarYear = movieYear ? movieYear + 1 : null;
-            const currentYear = new Date().getFullYear();
-            const oscarsHaveHappened = oscarYear && oscarYear <= currentYear;
-
+            // null = TBD (oscars not yet announced), 0+ = confirmed nominations count
             const oscarStatus =
-              stats?.oscarNominations && stats.oscarNominations >= 2
+              stats?.oscarNominations != null && stats.oscarNominations >= 2
                 ? 'achieved'
-                : oscarsHaveHappened && stats && stats.oscarNominations !== null && stats.oscarNominations < 2
+                : stats?.oscarNominations != null && stats.oscarNominations < 2
                 ? 'failed'
                 : 'pending';
 
