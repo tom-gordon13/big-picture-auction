@@ -417,9 +417,9 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
               oscar: {
                 status: oscarStatus,
                 value:
-                  stats?.oscarNominations !== null && stats?.oscarNominations !== undefined
-                    ? stats.oscarNominations.toString()
-                    : 'TBD',
+                  oscarStatus === 'pending'
+                    ? 'TBD'
+                    : stats?.oscarNominations?.toString() ?? 'TBD',
               },
               metacritic: {
                 status: metacriticStatus,
@@ -428,6 +428,8 @@ app.get('/api/auctions/latest/leaderboard', async (req: Request, res: Response) 
                   : 'TBD',
               },
               points: points > 0 ? points : null,
+              imdbUrl: movie.imdbUrl || null,
+              letterboxdUrl: movie.letterboxdUrl || null,
             };
           })
         );
